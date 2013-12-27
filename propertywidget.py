@@ -1,7 +1,6 @@
 from rv import rvtypes, commands
 
-import sys
-sys.path.append('/home/aberg/py26/lib/python2.6/site-packages')
+
 from PyQt4 import QtGui
 from PyQt4 import QtCore
 
