@@ -64,7 +64,7 @@ class Model(object):
         pass
 
     @staticmethod
-    def get_sources(self):
+    def get_sources():
         return [Source(source) for source in commands.sourcesAtFrame(commands.frame())]
 
 
@@ -75,8 +75,7 @@ class PropertyWidget(QtGui.QWidget):
         self.tree = QtGui.QTreeWidget()
         self.tree.setHeaderLabels(['Node', 'Value'])
 
-        update_button = QtGui.QPushButton('Update', self)
-        update_button.pressed.connect(self.on_update)
+        update_button = QtGui.QPushButton('Update')
 
         main_layout = QtGui.QVBoxLayout()
         main_layout.addWidget(self.tree)
@@ -84,10 +83,15 @@ class PropertyWidget(QtGui.QWidget):
 
         self.setLayout(main_layout)
 
-    def on_update(self, *args):
+        update_button.clicked.connect(self.on_update)
+
+        self.on_update()
+
+    def on_update(self):
         self.tree.clear()
         self.update_tree()
-        print 'update'
+        for index in range(self.tree.columnCount()):
+            self.tree.resizeColumnToContents(index)
 
 
     def update_tree(self):
@@ -102,7 +106,13 @@ class PropertyWidget(QtGui.QWidget):
             for node in nodes:
                 node_item = QtGui.QTreeWidgetItem([node.name])
                 group_item.addChild(node_item)
-                print 'attrs:', node.get_attrs()
+                attrs = node.get_attrs()
+                if attrs:
+                    attrs_item = QtGui.QTreeWidgetItem(['Source Attributes'])
+                    for attr in attrs:
+                        attr_item = QtGui.QTreeWidgetItem([attr[0], ', '.join(attr[1:])])
+                        attrs_item.addChild(attr_item)
+                    node_item.addChild(attrs_item)
                 properties = node.get_properties()
                 for prop in properties:
                     prop_item = QtGui.QTreeWidgetItem([prop.name, str(prop.get_value())])
@@ -122,24 +132,16 @@ class PyHello(rvtypes.MinorMode):
     """
 
     def show_properties(self, event):
+
+        # odd, need to keep a reference to the widget here or the
+        # signals wouldn't come through
+        self.dock_wid = DockWidget()
+        self.dock_wid.show()
+
         main_win = self.get_main_window()
         if not main_win:
             return
-        dock_wid = DockWidget()
-        main_win.addDockWidget(QtCore.Qt.RightDockWidgetArea, dock_wid)
-
-    def source_info(self, event):
-        sources = self.model.get_sources()
-        for source in sources:
-            group = source.get_group()
-            nodes = group.get_nodes()
-            for node in nodes:
-                print 'attrs:', node.get_attrs()
-                properties = node.get_properties()
-                print 'props:', properties
-                for prop in properties:
-                    print 'prop info:', prop.get_info()
-                    print prop.get_value()
+        main_win.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.dock_wid)
 
 
     def get_main_window(self):
@@ -153,9 +155,6 @@ class PyHello(rvtypes.MinorMode):
     def __init__(self):
         rvtypes.MinorMode.__init__(self)
         self.model = Model()
-
-
-
 
         self.init("pyhello",
                   [("key-down--z", self.show_properties, "z key")],
