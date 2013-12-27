@@ -1,0 +1,21 @@
+package: Property Inspector
+author: Johan Aberg
+organization: 
+contact: abergster@gmail.com
+version: 1.0
+requires: ''
+rv: 3.12.9
+url: 
+
+modes: 
+  - file: propertywidget.py
+    menu: ''
+    shortcut: ''
+    event: ''
+    load: immediate
+
+description: |
+    <p>
+    List properties and attributes of source nodes
+    </p>
+
