@@ -12,7 +12,7 @@ prop_func_map = {
 }
 
 
-class BaseProperty(object):
+class Property(object):
     def __init__(self, name):
         self.name = name
 
@@ -34,7 +34,13 @@ class Node(object):
         self.name = name
 
     def get_properties(self):
-        return [BaseProperty(prop) for prop in commands.properties(self.name)]
+        return [Property(prop) for prop in commands.properties(self.name)]
+
+    def get_property(self, prop_name):
+        for prop in self.get_properties():
+            if not prop.name.endswith(prop_name):
+                continue
+            return prop
 
     def get_type(self):
         return commands.nodeType(self.name)
@@ -54,6 +60,21 @@ class Source(object):
 class Group(object):
     def __init__(self, name):
         self.name = name
+
+    def get_media_name(self):
+        node = self.get_node('_source')
+        if not node:
+            return
+        prop = node.get_property('media.movie')
+        if not prop:
+            return
+        return prop.get_value()
+
+    def get_node(self, node_name):
+        for node in self.get_nodes():
+            if not node.name.endswith(node_name):
+                continue
+            return node
 
     def get_nodes(self):
         return [Node(node) for node in commands.nodesInGroup(self.name)]
@@ -85,6 +106,11 @@ class PropertyWidget(QtGui.QWidget):
 
         update_button.clicked.connect(self.on_update)
 
+        commands.bind("PropertyWidget", "global", "graph-node-inputs-changed", self.graph_event, "Doc String")
+
+        self.on_update()
+
+    def graph_event(self, event):
         self.on_update()
 
     def on_update(self):
@@ -99,8 +125,9 @@ class PropertyWidget(QtGui.QWidget):
         sources = Model.get_sources()
         for source in sources:
             group = source.get_group()
-            group_item = QtGui.QTreeWidgetItem([group.name])
+            group_item = QtGui.QTreeWidgetItem(group.get_media_name())
             self.tree.addTopLevelItem(group_item)
+            group_item.setExpanded(True)
 
             nodes = group.get_nodes()
             for node in nodes:
@@ -135,7 +162,8 @@ class PyHello(rvtypes.MinorMode):
 
         # odd, need to keep a reference to the widget here or the
         # signals wouldn't come through
-        self.dock_wid = DockWidget()
+        if self.dock_wid is None:
+            self.dock_wid = DockWidget()
         self.dock_wid.show()
 
         main_win = self.get_main_window()
@@ -151,14 +179,19 @@ class PyHello(rvtypes.MinorMode):
                 continue
             return wid
 
+    def graph_event(self, event):
+        print 'yay', event.contents()
+
 
     def __init__(self):
         rvtypes.MinorMode.__init__(self)
-        self.model = Model()
-
-        self.init("pyhello",
+        self.dock_wid = None
+        self.init("PropertyWidget",
                   [("key-down--z", self.show_properties, "z key")],
                   None)
+
+        # commands.bind("properties_dock", "global", "graph-node-inputs-changed", self.graph_event, "Doc String")
+        # commands.bind("properties_dock", "global", "incoming-source-path", self.event_test, "Doc String")
 
 
 def createMode():
