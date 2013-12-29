@@ -1,13 +1,42 @@
+import os
 from rv import rvtypes, commands
 
-
+import sys
+sys.path.append('/home/aberg/py26/lib/python2.6/site-packages')
 from PyQt4 import QtGui
 from PyQt4 import QtCore
 
 prop_func_map = {
     1: commands.getFloatProperty,
-    8: commands.getStringProperty,
-    2: commands.getIntProperty
+    2: commands.getIntProperty,
+    8: commands.getStringProperty
+}
+
+class PropItemWidget(QtGui.QWidget):
+    def __init__(self, values=[]):
+        super(PropItemWidget, self).__init__()
+        layout = QtGui.QHBoxLayout()
+        self.setLayout(layout)
+        self.values = values
+
+
+class PropFloatWidget(PropItemWidget):
+    def __init__(self, values):
+        super(PropFloatWidget, self).__init__()
+        self.values = values
+        self.add_widgets(values)
+
+    def add_widgets(self, values):
+        for val in values:
+            spin_box = QtGui.QDoubleSpinBox()
+            spin_box.setValue(val)
+            self.layout().addWidget(spin_box)
+
+
+prop_widget_item_map = {
+    1: PropFloatWidget,
+    2: PropItemWidget,
+    8: PropItemWidget
 }
 
 
@@ -67,7 +96,8 @@ class Group(object):
         prop = node.get_property('media.movie')
         if not prop:
             return
-        return prop.get_value()
+        movie = prop.get_value()
+        return os.path.basename(movie[0])
 
     def get_node(self, node_name):
         for node in self.get_nodes():
@@ -124,7 +154,7 @@ class PropertyWidget(QtGui.QWidget):
         sources = Model.get_sources()
         for source in sources:
             group = source.get_group()
-            group_item = QtGui.QTreeWidgetItem(group.get_media_name())
+            group_item = QtGui.QTreeWidgetItem([group.get_media_name()])
             self.tree.addTopLevelItem(group_item)
             group_item.setExpanded(True)
 
@@ -141,8 +171,11 @@ class PropertyWidget(QtGui.QWidget):
                     node_item.addChild(attrs_item)
                 properties = node.get_properties()
                 for prop in properties:
-                    prop_item = QtGui.QTreeWidgetItem([prop.name, str(prop.get_value())])
+                    item_class = prop_widget_item_map[prop.get_type()]
+                    prop_item = QtGui.QTreeWidgetItem([prop.name, ''])
+                    prop_item_widget = item_class(prop.get_value())
                     node_item.addChild(prop_item)
+                    self.tree.setItemWidget(prop_item, 1, prop_item_widget)
 
 
 class DockWidget(QtGui.QDockWidget):
