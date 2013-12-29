@@ -120,6 +120,7 @@ PROP_WIDGET_ITEM_MAP = {
 class Property(object):
     def __init__(self, name):
         self.name = name
+        self.nice_name = '.'.join(name.split('.')[1:])
 
     def get_info(self):
         return commands.propertyInfo(self.name)
@@ -137,6 +138,8 @@ class Property(object):
 class Node(object):
     def __init__(self, name):
         self.name = name
+        self.nice_name = name
+
 
     def get_properties(self):
         return [Property(prop) for prop in commands.properties(self.name)]
@@ -238,7 +241,7 @@ class PropertyWidget(QtGui.QWidget):
 
             nodes = group.get_nodes()
             for node in nodes:
-                node_item = QtGui.QTreeWidgetItem([node.name])
+                node_item = QtGui.QTreeWidgetItem([node.nice_name])
                 group_item.addChild(node_item)
                 attrs = node.get_attrs()
                 if attrs:
@@ -250,7 +253,7 @@ class PropertyWidget(QtGui.QWidget):
                 properties = node.get_properties()
                 for prop in properties:
                     item_class = PROP_WIDGET_ITEM_MAP[prop.get_type()]
-                    prop_item = QtGui.QTreeWidgetItem([prop.name, ''])
+                    prop_item = QtGui.QTreeWidgetItem([prop.nice_name, ''])
                     prop_item_widget = item_class(prop.name, prop.get_value())
                     node_item.addChild(prop_item)
                     self.tree.setItemWidget(prop_item, 1, prop_item_widget)
