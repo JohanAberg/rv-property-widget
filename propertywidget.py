@@ -1,16 +1,19 @@
 import os
+import sys
+
 from rv import rvtypes, commands
 
-import sys
 sys.path.append('/home/aberg/py26/lib/python2.6/site-packages')
+
 from PyQt4 import QtGui
 from PyQt4 import QtCore
 
-prop_func_map = {
+PROP_FUNC_MAP = {
     1: commands.getFloatProperty,
     2: commands.getIntProperty,
     8: commands.getStringProperty
 }
+
 
 class PropItemWidget(QtGui.QWidget):
     def __init__(self, values=[]):
@@ -27,16 +30,52 @@ class PropFloatWidget(PropItemWidget):
         self.add_widgets(values)
 
     def add_widgets(self, values):
-        for val in values:
+        spin_rows_layout = QtGui.QVBoxLayout()
+        current_row_layout = QtGui.QHBoxLayout()
+        spin_rows_layout.addChildLayout(current_row_layout)
+
+        for index, val in enumerate(values):
+            if index % 4 == 0:
+                current_row_layout = QtGui.QHBoxLayout()
+                spin_rows_layout.addLayout(current_row_layout)
+
             spin_box = QtGui.QDoubleSpinBox()
+            spin_box.setValue(val)
+            current_row_layout.addWidget(spin_box)
+
+        self.layout().addLayout((spin_rows_layout))
+
+
+class PropIntWidget(PropItemWidget):
+    def __init__(self, values):
+        super(PropIntWidget, self).__init__()
+        self.values = values
+        self.add_widgets(values)
+
+    def add_widgets(self, values):
+        for val in values:
+            spin_box = QtGui.QSpinBox()
             spin_box.setValue(val)
             self.layout().addWidget(spin_box)
 
 
-prop_widget_item_map = {
+class PropStringWidget(PropItemWidget):
+    def __init__(self, values):
+        super(PropStringWidget, self).__init__()
+        self.values = values
+        self.add_widgets(values)
+
+    def add_widgets(self, values):
+        for val in values:
+            spin_box = QtGui.QLineEdit()
+            spin_box.setText(val)
+            self.layout().addWidget(spin_box)
+
+
+PROP_WIDGET_ITEM_MAP = {
     1: PropFloatWidget,
-    2: PropItemWidget,
-    8: PropItemWidget
+    2: PropIntWidget,
+    8: PropStringWidget
 }
 
 
@@ -51,7 +90,7 @@ class Property(object):
         return self.get_info()['type']
 
     def get_value(self):
-        prop_func = prop_func_map.get(self.get_type())
+        prop_func = PROP_FUNC_MAP.get(self.get_type())
         if not prop_func:
             raise RuntimeError('Property not found %s' % self.get_type())
         return prop_func(self.name, 0, 20000)
@@ -124,6 +163,7 @@ class PropertyWidget(QtGui.QWidget):
 
         self.tree = QtGui.QTreeWidget()
         self.tree.setHeaderLabels(['Node', 'Value'])
+        self.tree.setAlternatingRowColors(True)
 
         update_button = QtGui.QPushButton('Update')
 
@@ -171,7 +211,7 @@ class PropertyWidget(QtGui.QWidget):
                     node_item.addChild(attrs_item)
                 properties = node.get_properties()
                 for prop in properties:
-                    item_class = prop_widget_item_map[prop.get_type()]
+                    item_class = PROP_WIDGET_ITEM_MAP[prop.get_type()]
                     prop_item = QtGui.QTreeWidgetItem([prop.name, ''])
                     prop_item_widget = item_class(prop.get_value())
                     node_item.addChild(prop_item)
@@ -216,14 +256,14 @@ class PropertyMode(rvtypes.MinorMode):
         rvtypes.MinorMode.__init__(self)
         self.dock_wid = None
         self.init("PropertyWidget",
-                    None,
-                    None,
-                    [
-                        ("Tools",
-                            [ ("Properties Panel", self.show_properties, None, None)]
-                        )
-                    ]
-                )
+                  None,
+                  None,
+                  [
+                      ("Tools",
+                       [("Properties Panel", self.show_properties, None, None)]
+                      )
+                  ]
+        )
 
 
 def createMode():
