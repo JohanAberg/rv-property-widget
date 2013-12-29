@@ -29,7 +29,7 @@ class PropItemWidget(QtGui.QWidget):
         self.values = values
         self.value_items = []
 
-    def on_update(self, value):
+    def on_update(self, *value):
         print 'on update value:', self.name, value
 
 class PropFloatWidget(PropItemWidget):
@@ -39,7 +39,7 @@ class PropFloatWidget(PropItemWidget):
         self.values = values
         self.add_widgets(values)
 
-    def on_update(self, value):
+    def on_update(self, *value):
         values = []
         for item in self.value_items:
             values.append(item.value())
@@ -73,9 +73,17 @@ class PropIntWidget(PropItemWidget):
         self.values = values
         self.add_widgets(values)
 
+    def on_update(self, *value):
+        values = []
+        for item in self.value_items:
+            values.append(item.value())
+        PROP_FUNC_MAP_SET[2](self.name, values, False)
+
     def add_widgets(self, values):
         for val in values:
             spin_box = QtGui.QSpinBox()
+            self.value_items.append(spin_box)
+            spin_box.valueChanged.connect(self.on_update)
             spin_box.setValue(val)
             self.layout().addWidget(spin_box)
 
@@ -87,11 +95,19 @@ class PropStringWidget(PropItemWidget):
         self.values = values
         self.add_widgets(values)
 
+    def on_update(self, *value):
+        values = []
+        for item in self.value_items:
+            values.append(str(item.text()))
+        PROP_FUNC_MAP_SET[8](self.name, values, False)
+
     def add_widgets(self, values):
         for val in values:
-            spin_box = QtGui.QLineEdit()
-            spin_box.setText(val)
-            self.layout().addWidget(spin_box)
+            line_edit = QtGui.QLineEdit()
+            self.value_items.append(line_edit)
+            line_edit.returnPressed.connect(self.on_update)
+            line_edit.setText(val)
+            self.layout().addWidget(line_edit)
 
 
 PROP_WIDGET_ITEM_MAP = {
