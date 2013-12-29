@@ -14,20 +14,36 @@ PROP_FUNC_MAP = {
     8: commands.getStringProperty
 }
 
+PROP_FUNC_MAP_SET = {
+    1: commands.setFloatProperty,
+    2: commands.setIntProperty,
+    8: commands.setStringProperty
+}
 
 class PropItemWidget(QtGui.QWidget):
-    def __init__(self, values=[]):
+    def __init__(self, name='', values=[]):
         super(PropItemWidget, self).__init__()
         layout = QtGui.QHBoxLayout()
+        self.name = name
         self.setLayout(layout)
         self.values = values
+        self.value_items = []
 
+    def on_update(self, value):
+        print 'on update value:', self.name, value
 
 class PropFloatWidget(PropItemWidget):
-    def __init__(self, values):
+    def __init__(self, name, values):
         super(PropFloatWidget, self).__init__()
+        self.name = name
         self.values = values
         self.add_widgets(values)
+
+    def on_update(self, value):
+        values = []
+        for item in self.value_items:
+            values.append(item.value())
+        PROP_FUNC_MAP_SET[1](self.name, values, False)
 
     def add_widgets(self, values):
         spin_rows_layout = QtGui.QVBoxLayout()
@@ -40,15 +56,20 @@ class PropFloatWidget(PropItemWidget):
                 spin_rows_layout.addLayout(current_row_layout)
 
             spin_box = QtGui.QDoubleSpinBox()
+            spin_box.setMaximum(999999)
+            spin_box.setMinimum(-999999)
+            self.value_items.append(spin_box)
             spin_box.setValue(val)
+            spin_box.valueChanged.connect(self.on_update)
             current_row_layout.addWidget(spin_box)
 
         self.layout().addLayout((spin_rows_layout))
 
 
 class PropIntWidget(PropItemWidget):
-    def __init__(self, values):
+    def __init__(self, name, values):
         super(PropIntWidget, self).__init__()
+        self.name = name
         self.values = values
         self.add_widgets(values)
 
@@ -60,8 +81,9 @@ class PropIntWidget(PropItemWidget):
 
 
 class PropStringWidget(PropItemWidget):
-    def __init__(self, values):
+    def __init__(self, name, values):
         super(PropStringWidget, self).__init__()
+        self.name = name
         self.values = values
         self.add_widgets(values)
 
@@ -213,7 +235,7 @@ class PropertyWidget(QtGui.QWidget):
                 for prop in properties:
                     item_class = PROP_WIDGET_ITEM_MAP[prop.get_type()]
                     prop_item = QtGui.QTreeWidgetItem([prop.name, ''])
-                    prop_item_widget = item_class(prop.get_value())
+                    prop_item_widget = item_class(prop.name, prop.get_value())
                     node_item.addChild(prop_item)
                     self.tree.setItemWidget(prop_item, 1, prop_item_widget)
 
