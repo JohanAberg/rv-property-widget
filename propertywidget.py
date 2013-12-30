@@ -3,6 +3,7 @@ import sys
 
 from rv import rvtypes, commands
 
+
 sys.path.append('/home/aberg/py26/lib/python2.6/site-packages')
 
 from PyQt4 import QtGui
@@ -20,6 +21,7 @@ PROP_FUNC_MAP_SET = {
     8: commands.setStringProperty
 }
 
+
 class PropItemWidget(QtGui.QWidget):
     def __init__(self, name='', values=[]):
         super(PropItemWidget, self).__init__()
@@ -31,6 +33,7 @@ class PropItemWidget(QtGui.QWidget):
 
     def on_update(self, *value):
         print 'on update value:', self.name, value
+
 
 class PropFloatWidget(PropItemWidget):
     def __init__(self, name, values):
@@ -56,6 +59,7 @@ class PropFloatWidget(PropItemWidget):
                 spin_rows_layout.addLayout(current_row_layout)
 
             spin_box = QtGui.QDoubleSpinBox()
+            spin_box.setSingleStep(0.1)
             spin_box.setMaximum(999999)
             spin_box.setMinimum(-999999)
             self.value_items.append(spin_box)
@@ -77,7 +81,7 @@ class PropIntWidget(PropItemWidget):
         values = []
         for item in self.value_items:
             values.append(item.value())
-        PROP_FUNC_MAP_SET[2](self.name, values, False)
+        PROP_FUNC_MAP_SET[2](self.name, values, True)
 
     def add_widgets(self, values):
         for val in values:
@@ -128,7 +132,7 @@ class Property(object):
     def get_type(self):
         return self.get_info()['type']
 
-    def get_value(self):
+    def get_values(self):
         prop_func = PROP_FUNC_MAP.get(self.get_type())
         if not prop_func:
             raise RuntimeError('Property not found %s' % self.get_type())
@@ -176,7 +180,7 @@ class Group(object):
         prop = node.get_property('media.movie')
         if not prop:
             return
-        movie = prop.get_value()
+        movie = prop.get_values()
         return os.path.basename(movie[0])
 
     def get_node(self, node_name):
@@ -254,9 +258,24 @@ class PropertyWidget(QtGui.QWidget):
                 for prop in properties:
                     item_class = PROP_WIDGET_ITEM_MAP[prop.get_type()]
                     prop_item = QtGui.QTreeWidgetItem([prop.nice_name, ''])
-                    prop_item_widget = item_class(prop.name, prop.get_value())
+                    prop_item_widget = item_class(prop.name, prop.get_values())
                     node_item.addChild(prop_item)
                     self.tree.setItemWidget(prop_item, 1, prop_item_widget)
+
+                    # I can't figure out how to list the color nodes' properties
+                    # so do it manually for now using #RVColor
+                    #
+                    for prop_find in prop.get_values():
+                        if not prop_find == 'RVColor':
+                            continue
+                        for col_prop in ['exposure', 'gamma', 'saturation', 'contrast']:
+                            prop_name = '#RVColor.color.' + col_prop
+                            values = commands.getFloatProperty(prop_name, 0, 4)
+                            col_item = QtGui.QTreeWidgetItem([col_prop, ''])
+                            prop_item.addChild(col_item)
+                            item_class = PROP_WIDGET_ITEM_MAP[1]
+                            prop_item_widget = item_class(prop_name, values)
+                            self.tree.setItemWidget(col_item, 1, prop_item_widget)
 
 
 class DockWidget(QtGui.QDockWidget):
